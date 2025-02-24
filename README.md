@@ -840,10 +840,32 @@ Comparé aux résultats avant fine-tuning, on observe une amélioration du WER e
 
 Après le fine-tuning du modèle Whisper Medium sur les données médicales, nous constatons une amélioration des performances :
 
-- Réduction du Word Error Rate (WER) : Passage de 31.18% à 30.23%, indiquant une meilleure transcription des mots.
-  
-- Diminution du Character Error Rate (CER) : De 9.78% à 9.12%, signifiant une meilleure précision au niveau des caractères.
-  
-- Amélioration du Normalized WER et CER : Le WER normalisé passe de 12.86% à 11.19%, et le CER normalisé de 5.18% à 4.51% montrant une correction efficace des variations liées aux espaces et à la ponctuation.
-  
-- Légère baisse du Medical Term Accuracy (MTA) : Passage de 64.20% à 62.65%, possiblement dû à un surajustement du modèle sur les structures générales du text ce qui peut avoir un léger impact sur la transcription des termes spécifiques.
+### 📊 Comparaison des Résultats Avant et Après Fine-Tuning
+
+| **Métrique**                    | **Avant Fine-Tuning** | **Après Fine-Tuning** | **Amélioration** |
+|---------------------------------|----------------------|----------------------|------------------|
+| **WER (Word Error Rate)**       | `31.18%`            | `30.23%`            | 📉 `-0.95%`      |
+| **Normalized WER**              | `12.86%`            | `11.19%`            | 📉 `-1.67%`      |
+| **CER (Character Error Rate)**  | `9.78%`             | `9.12%`             | 📉 `-0.66%`      |
+| **Normalized CER**              | `5.18%`             | `4.51%`             | 📉 `-0.67%`      |
+| **MTA (Medical Term Accuracy)** | `64.20%`            | `62.65%`            | 📉 `-1.55%`      |
+
+
+### 📌 Analyse des Résultats du Fine-Tuning
+
+Ces résultats montrent que le **fine-tuning du modèle Whisper Medium** a permis une **réduction notable des erreurs** sur toutes les métriques d'évaluation, bien que les améliorations soient modestes. Voici quelques points à retenir :
+
+✅ **Réduction du WER et du CER** : Le taux d'erreur au niveau des mots (**WER**) et des caractères (**CER**) a diminué après fine-tuning, indiquant que le modèle a mieux appris à reconnaître les termes médicaux et les transcriptions en général.
+
+✅ **Amélioration du Normalized WER et CER** : En prenant en compte la normalisation des textes (suppression des variations d'espaces et de ponctuation), nous observons également une amélioration sur ces métriques.
+
+❌ **Légère baisse du MTA (Medical Term Accuracy)** : Le pourcentage de termes médicaux correctement transcrits a légèrement diminué (**-1.55%**). Cela peut être dû au fait que le modèle a ajusté ses prédictions globales, mais au détriment de certains termes médicaux spécialisés. Pour améliorer cet aspect, une **augmentation de la quantité de données d'entraînement** et une meilleure **représentation des termes médicaux rares** sont nécessaires.
+
+### 🛠️ Perspectives d'Amélioration
+
+🔹 **Augmenter la taille du dataset** : Les améliorations restent limitées car le fine-tuning a été réalisé sur un ensemble de données relativement restreint. Un dataset plus grand et plus varié permettrait d’obtenir des gains plus significatifs.
+
+🔹 **Enrichir le corpus avec des termes médicaux** : Un lexique médical plus détaillé et des données spécifiques au domaine pourraient améliorer la reconnaissance des termes spécialisés.
+
+
+En conclusion, **même une amélioration légère reste un progrès important**. Le fine-tuning a permis une réduction des erreurs, mais pour obtenir des gains plus significatifs, il faudra **davantage de données** et **un ajustement plus poussé du modèle**. 🚀
