@@ -744,13 +744,9 @@ trainer.train()
 Après l'entraînement du modèle Whisper Medium sur le dataset médical, nous avons observé une réduction progressive de la perte d'entraînement et de validation au fil des époques.
 
   
-- Training Loss : Cette métrique indique à quel point le modèle s'ajuste aux données d'entraînement.
+- Training Loss : Cette métrique indique à quel point le modèle s'ajuste aux données d'entraînement. Une diminution constante signifie que le modèle apprend bien sans sur-ajustement excessif.
 
-Une diminution constante signifie que le modèle apprend bien sans sur-ajustement excessif.
-
-- Validation Loss : Cette métrique mesure l'erreur sur l'ensemble de validation, qui représente des données non vues par le modèle. 
-
-Une baisse continue suggère une bonne généralisation.
+- Validation Loss : Cette métrique mesure l'erreur sur l'ensemble de validation, qui représente des données non vues par le modèle. Une baisse continue suggère une bonne généralisation.
 
  - 📉 Analyse des résultats obtenus :
   
