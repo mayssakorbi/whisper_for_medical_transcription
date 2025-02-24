@@ -373,7 +373,7 @@ Conclusion : Le champ "prompt" et "speaker_id" n'ont pas d’impact sur les tran
 
 5️⃣ Téléchargement du Modèle, Tokenizer, Feature Extractor et Processor
 
-Avant le fine-tuning, nous avons téléchargé les composants nécessaires :
+Pour bien préparer le input adéquat au modèle, nous avons téléchargé les composants nécessaires :
 ``` python
 model_name_or_path = "openai/whisper-medium"  
 task = "transcribe"  
@@ -418,19 +418,21 @@ medical_data = medical_data.map(prepare_dataset, remove_columns=medical_data.col
 
 - Les transcriptions ont été normalisées pour uniformiser les entrées.
 
-- L'analyse des attributs a montré que "prompt" influence la transcription.
+- L'analyse des attributs a montré que "prompt" et speaker_id n'influencent pas la transcription.
 
 - Le dataset a été pré-traité et rendu compatible avec Whisper.
-- 
-### 🏁 4.Plan pour l’évaluation avant le fine-tuning
+  
+### 🏁 4.Evaluation du modèle avant le fine-tuning
 Avant d'entraîner le modèle Whisper sur notre dataset médical, il est essentiel d'évaluer ses performances initiales sur l'ensemble de validation. 
 Cette étape nous permet d'avoir un point de comparaison après le fine-tuning et d’identifier les faiblesses du modèle sur notre domaine spécifique.
 ### 📥 Data Collator 
 Pour évaluer le modèle, il est crucial d'assurer une préparation cohérente des données. Le Data Collator joue un rôle clé dans cette étape. Il permet :
 
-L'alignement et le padding des séquences (les entrées audio et les labels n’ont pas toujours la même longueur).
-L’optimisation du traitement en lot (batch processing), améliorant l'efficacité du modèle sur GPU.
-L’ignorance des tokens de remplissage dans la fonction de perte, garantissant une meilleure stabilité lors de l’apprentissage et l’évaluation.
+- L'alignement et le padding des séquences (les entrées audio et les labels n’ont pas toujours la même longueur).
+
+- L’optimisation du traitement en lot (batch processing), améliorant l'efficacité du modèle sur GPU.
+
+- L’ignorance des tokens de remplissage dans la fonction de perte, garantissant une meilleure stabilité lors de l’apprentissage et l’évaluation.
 ```python
 
 from dataclasses import dataclass
@@ -495,7 +497,7 @@ Nous avons défini une liste de termes médicaux et comparé leur reconnaissance
 ### 🏗 Chargement du Modèle de Base et Évaluation
 
 Nous utilisons le modèle Whisper Medium pré-entraîné sans modification.
-L'évaluation est effectuée sur l'ensemble de validation.
+L'évaluation est effectuée sur l'ensemble de validation. Exemple de code :
 ```python
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 import evaluate
@@ -571,15 +573,19 @@ L’objectif du fine-tuning est d’adapter Whisper Medium aux spécificités du
 Cette section détaille les différentes étapes du fine-tuning, incluant la quantification en 4-bit (QLoRA), l'optimisation des hyperparamètres et la sauvegarde efficace des poids adaptés via LoRA.
 
 📥 Chargement du Modèle et Quantification en 4-bit (QLoRA)
-Le modèle Whisper Medium est trop volumineux pour être fine-tuné efficacement sans optimisation mémoire. Nous appliquons QLoRA (Quantized LoRA), qui combine :
+Le modèle Whisper Medium est trop volumineux pour être fine-tuné efficacement sans optimisation mémoire. 
 
-La quantification en 4-bit : réduit l’utilisation mémoire tout en maintenant les performances.
-LoRA (Low-Rank Adaptation) : ajuste uniquement un sous-ensemble de paramètres pour accélérer l'apprentissage.
+Nous appliquons QLoRA (Quantized LoRA), qui combine :
+
+1- La quantification en 4-bit : réduit l’utilisation mémoire tout en maintenant les performances.
+ 
+2- LoRA (Low-Rank Adaptation) : ajuste uniquement un sous-ensemble de paramètres pour accélérer l'apprentissage.
+ 
 Pourquoi QLoRA ?
 
-Économie de mémoire : Permet d'entraîner de grands modèles sur des GPU avec moins de VRAM.
-Efficacité : LoRA n'entraîne qu’un petit ensemble de paramètres au lieu de modifier tout le modèle.
-Performances maintenues : L’impact de la quantification 4-bit sur l’exactitude du modèle reste négligeable.
+- Économie de mémoire : Permet d'entraîner de grands modèles sur des GPU avec moins de VRAM.
+- Efficacité : LoRA n'entraîne qu’un petit ensemble de paramètres au lieu de modifier tout le modèle.
+- Performances maintenues : L’impact de la quantification 4-bit sur l’exactitude du modèle reste négligeable.
 
 ### 🔧 Application de La Quantification en 4 bit
 
@@ -654,11 +660,32 @@ Le choix des hyperparamètres a été fait en fonction de :
     load_best_model_at_end=True  # Charge le meilleur modèle après entraînement )
   
   ```
+## 📌 Justification des choix :
 
+- Taille des batchs : per_device_train_batch_size=32 et per_device_eval_batch_size=32 → Permet un entraînement rapide tout en maximisant l’utilisation de la VRAM sur les GPU récents.
+La taille du batch a été calibrée pour optimiser la consommation mémoire et la vitesse de convergence.
+
+- Nombre d’époques (num_train_epochs=5) : Suffisant pour atteindre une bonne convergence sans entraîner un sur-ajustement.
+
+- L'utilisation de load_best_model_at_end=True garantit que l'on récupère le meilleur modèle en fonction des performances sur l’ensemble de validation.
+  
+- Gradient Accumulation (gradient_accumulation_steps=1) : Permet une mise à jour des poids après chaque batch, ce qui assure une meilleure stabilité de l'entraînement.
+
+- Gestion de l'apprentissage (learning_rate=2e-5, cosine_with_restarts) : Un taux d’apprentissage faible permet d'éviter des variations brusques et améliore la généralisation.
+
+- lr_scheduler_type="cosine_with_restarts" ajuste dynamiquement la courbe d’apprentissage pour une convergence plus fluide.
+ 
+- Quantification mémoire (bf16=True) : Utilisation de bfloat16, optimisé pour les GPU récents afin de réduire la consommation mémoire sans perte de précision.
+
+- Gestion des modèles sauvegardés (save_total_limit=3) : Conserve uniquement les 3 meilleurs modèles pour optimiser l’espace de stockage.
+
+🔹 Ces choix assurent un entraînement efficace, optimisé pour une consommation mémoire réduite et une généralisation performante sur des transcriptions médicales spécifiques. 🚀
   
   ### 💾 Sauvegarde Optimisée avec SavePeftModelCallback
   
-  Par défaut, Seq2SeqTrainer enregistre tous les poids du modèle, ce qui consomme trop d’espace disque. Pour éviter cela, nous enregistrons uniquement les poids LoRA grâce à un callback personnalisé.
+  Par défaut, Seq2SeqTrainer enregistre tous les poids du modèle, ce qui consomme trop d’espace disque.
+  
+  Pour éviter cela, nous enregistrons uniquement les poids LoRA grâce à un callback personnalisé.
 
   ```python
   from transformers import TrainerCallback, TrainingArguments, TrainerState, TrainerControl
@@ -713,14 +740,15 @@ trainer.train()
 ```
 
 ### 📊 Analyse des Résultats du Fine-Tuning
+
 Après l'entraînement du modèle Whisper Medium sur le dataset médical, nous avons observé une réduction progressive de la perte d'entraînement et de validation au fil des époques.
 
-- 🔍 Interprétation des valeurs de loss :
-Training Loss : Cette métrique indique à quel point le modèle s'ajuste aux données d'entraînement.
+  
+- Training Loss : Cette métrique indique à quel point le modèle s'ajuste aux données d'entraînement.
 
 Une diminution constante signifie que le modèle apprend bien sans sur-ajustement excessif.
 
-Validation Loss : Cette métrique mesure l'erreur sur l'ensemble de validation, qui représente des données non vues par le modèle. 
+- Validation Loss : Cette métrique mesure l'erreur sur l'ensemble de validation, qui représente des données non vues par le modèle. 
 
 Une baisse continue suggère une bonne généralisation.
 
@@ -790,13 +818,14 @@ model_finetuned = PeftModel.from_pretrained(model_finetuned, peft_model_id)
 model_finetuned.config.use_cache = True
 
 ```
-### ✅ Évaluation du modèle Après Fine-Tuning
-
-L’évaluation post-entrainement a été réalisée sur l’ensemble de test en utilisant les mêmes métriques que l’évaluation initiale : 
+ 
 
 ### 📊 Résultats de l'Évaluation Après Fine-Tuning
 
+L’évaluation post-entrainement a été réalisée sur l’ensemble de test en utilisant les mêmes métriques que l’évaluation initiale :
+
 Ce tableau affiche les résultats du modèle après fine-tuning, évalué sur l'ensemble test. 
+
 Comparé aux résultats avant fine-tuning, on observe une amélioration du WER et du CER, ce qui indique une meilleure transcription des données médicales.
 
 | **Métrique**                   | **Valeur obtenue**  | **Description**  |
